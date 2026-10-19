@@ -8,7 +8,7 @@ import { formatTurnover, tone } from '../services/format.js';
 import { createCarts } from './carts.js';
 import { createDimsum, createSteamer } from './dimsum.js';
 import { basic, box, cyl, lambert, plankTexture, put, sphere, torus, windowTexture } from './geom.js';
-import { createBoard, drawNeon, drawNote, drawPrice, drawSession } from './labels.js';
+import { createBoard, drawNeon, drawNote, drawPrice, drawSession, sharpCanvasTexture } from './labels.js';
 import { createPerson, createReader, givePaper, idlePerson, posePhone, poseSit, walkPerson } from './people.js';
 import { createAlley, createRiceStall } from './zones.js';
 import { createBlock } from './block.js';
@@ -420,10 +420,12 @@ function sampleLoop(points, t, target) {
 }
 
 function wallNeon(text, color, width = 2.3) {
+  const scale = Math.min(3, Math.max(2, Math.round(window.devicePixelRatio || 2)));
   const canvas = document.createElement('canvas');
-  canvas.width = 640;
-  canvas.height = 180;
+  canvas.width = 640 * scale;
+  canvas.height = 180 * scale;
   const ctx = canvas.getContext('2d');
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.clearRect(0, 0, 640, 180);
   ctx.strokeStyle = color;
   ctx.lineWidth = 10;
@@ -433,8 +435,7 @@ function wallNeon(text, color, width = 2.3) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, 320, 92);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  const texture = sharpCanvasTexture(canvas);
   return new THREE.Mesh(
     new THREE.PlaneGeometry(width, width * (180 / 640)),
     new THREE.MeshBasicMaterial({
@@ -575,6 +576,12 @@ function buildLife(scene) {
   };
 }
 
+function drawingRatio(width) {
+  const density = window.devicePixelRatio || 1;
+  if (width < 900) return Math.min(3, Math.max(density, 2));
+  return Math.min(density, 1.5);
+}
+
 export function createWorld(parent) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#f0c9a4');
@@ -582,7 +589,7 @@ export function createWorld(parent) {
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(16, 22, 22);
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 800 ? 1.15 : 1.5));
+  renderer.setPixelRatio(drawingRatio(window.innerWidth));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -653,7 +660,12 @@ export function createWorld(parent) {
   scene.add(carts.root);
   const stars = buildStars(scene);
 
-  const composer = new EffectComposer(renderer);
+  const composerTarget = new THREE.WebGLRenderTarget(
+    Math.floor(window.innerWidth * renderer.getPixelRatio()),
+    Math.floor(window.innerHeight * renderer.getPixelRatio()),
+    { samples: 4, type: THREE.HalfFloatType },
+  );
+  const composer = new EffectComposer(renderer, composerTarget);
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.24, 0.38, 0.86);
   composer.addPass(bloom);
@@ -669,17 +681,21 @@ export function createWorld(parent) {
   let lastSession = null;
 
   function resize() {
-    const viewport = window.visualViewport;
-    const width = Math.round(viewport?.width || window.innerWidth);
-    const height = Math.max(1, Math.round(viewport?.height || window.innerHeight));
+    const frame = renderer.domElement.parentElement;
+    const width = Math.max(1, Math.round(frame?.clientWidth || window.innerWidth));
+    const height = Math.max(1, Math.round(frame?.clientHeight || window.innerHeight));
     const aspect = width / height;
     const wide = Math.max(0, aspect - 1.7);
+    const narrow = width < 900;
     camera.aspect = aspect;
-    camera.fov = aspect < 1 ? 46 : Math.max(24, 34 - wide * 10);
+    camera.fov = narrow ? 46 : Math.max(24, 34 - wide * 10);
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, width < 800 ? 1.15 : 1.5));
+    const ratio = drawingRatio(width);
+    renderer.setPixelRatio(ratio);
     renderer.setSize(width, height);
-    composer.setSize(width, height);
+    composer.setPixelRatio(ratio);
+    bloom.strength = narrow ? 0.08 : 0.24;
+    bloom.radius = narrow ? 0.22 : 0.38;
   }
 
   function overviewFrame() {

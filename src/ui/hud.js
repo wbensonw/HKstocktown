@@ -175,7 +175,7 @@ function topHtml(state) {
     <h1>恆指大茶樓</h1>
     <p class="legend">每籠一隻精選港股。每桌一大籠，成交越大蒸氣越密，茶客人數也跟着變，不是真實茶客，也不是買賣盤。</p>
     <p class="index-line ${tone(view.index.changePercent)}">${formatPrice(view.index.price, true)}　${formatPct(view.index.changePercent)}</p>
-    <p>大市成交 ${formatTurnover(view.index.turnover)}</p>
+    <p class="turnover-line">大市成交 ${formatTurnover(view.index.turnover)}</p>
     <p class="meta">${sourceLabel(view.source)}${view.testNote ? `　${view.testNote}` : ''}${view.replay ? '　分時回放' : ''}　${view.index.time || ''}</p>
   `;
 }

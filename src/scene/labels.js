@@ -11,14 +11,27 @@ export function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-export function createBoard(pixelW, pixelH, worldW, worldH) {
-  const canvas = document.createElement('canvas');
-  canvas.width = pixelW;
-  canvas.height = pixelH;
-  const ctx = canvas.getContext('2d');
+export function sharpCanvasTexture(canvas) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.anisotropy = 16;
+  return texture;
+}
+
+function textScale() {
+  return Math.min(3, Math.max(2, Math.round(window.devicePixelRatio || 2)));
+}
+
+export function createBoard(pixelW, pixelH, worldW, worldH) {
+  const scale = textScale();
+  const canvas = document.createElement('canvas');
+  canvas.width = pixelW * scale;
+  canvas.height = pixelH * scale;
+  const ctx = canvas.getContext('2d');
+  const texture = sharpCanvasTexture(canvas);
   const material = new THREE.MeshBasicMaterial({
     map: texture,
     transparent: true,
@@ -55,6 +68,7 @@ export function createBoard(pixelW, pixelH, worldW, worldH) {
     redraw(key, draw) {
       if (this.key === key) return;
       this.key = key;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.clearRect(0, 0, pixelW, pixelH);
       draw(ctx, pixelW, pixelH);
       texture.needsUpdate = true;
