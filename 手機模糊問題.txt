@@ -1,0 +1,74 @@
+以下是我問AI有關手機網頁模糊的問題：
+Https://wbensonw.github.io/HKstocktown/
+為什麼這個網站在手機版解析度會降低?開啟手機桌面版則清晰。
+
+以下是AI的解答：
+這類網站在手機瀏覽器上出現「手機模式下模糊、切換為桌面版後清晰」的現象，最核心的原因在於網站對「裝置像素比（Device Pixel Ratio, DPR）」與 Viewport 視域寬度的繪圖解析度未進行正確適配。
+
+特別是包含 Canvas 畫布、遊戲引擎（如 Phaser/PixiJS）、圖表或動態地圖的網站，常會因此出現畫質顯著下降的問題。
+
+詳細技術原因解析
+1. 未匹配高像素密度螢幕（DPR 處理不當）
+高畫質手機螢幕特性： 現代手機（如 iPhone Retina 或 Android 旗艦機）都是高像素密度螢幕，物理像素（Physical Pixels）通常是 CSS 邏輯像素（CSS Pixels）的 2 倍至 3 倍（即 window.devicePixelRatio 為 2 或 3）。
+
+手機模式下的渲染問題：
+
+在手機模式下，網站讀取了 Viewport 設定（如 width=device-width），取得的邏輯寬度較小（例如 390px）。
+
+如果網頁在初始化 Canvas 畫布或圖層時，直接以 canvas.width = window.innerWidth（390px）作為內建渲染解析度，而沒有乘以 DPR：
+
+瀏覽器就會將這張只有 390px 解析度的低畫質圖片/畫布，強制拉伸放大到 1170px 的物理螢幕上顯示，導致畫面模糊、發虛或出現鋸齒。
+
+2. 切換「桌面版網站」時發生了什麼？
+當你在手機瀏覽器勾選「切換為桌面版網站」時：
+
+瀏覽器會忽略原本專為手機設計的 Viewport Meta 標籤。
+
+手機瀏覽器會模擬一台大螢幕電腦，將 CSS 視域寬度拉大到桌面級尺寸（通常為 980px、1024px 或更高）。
+
+網頁在重新計算畫布尺寸時，讀取到了 1024px 的寬度，從而生成了高出數倍解析度的繪圖緩衝區（Rendering Buffer）。
+
+瀏覽器再將這個高解析度的畫面縮放顯示在手機螢幕上，因此視覺上會感到非常清晰銳利。
+
+3. 效能優化策略（動態降畫質）
+部分 WebGL/Canvas 遊戲或動態網站為了避免手機過熱或卡頓，會自動偵測 User-Agent（使用者裝置標籤）。
+
+當檢測到為 Mobile 裝置時，網頁會主動降級解析度以節省繪圖效能；而切換為桌面版後，網頁誤以為是電腦開頁，便開啟了高畫質模式。
+
+如何修復這個問題？（開發者角度）
+如果你是該網站的開發者，可以透過以下方式讓手機版與桌面版保持一致的清晰度：
+
+1. Canvas / 畫布匹配 devicePixelRatio
+在設定 Canvas 尺寸時，需將 CSS 顯示尺寸與內建渲染解析度分離，並乘上 DPR：
+
+JavaScript
+const dpr = window.devicePixelRatio || 1;
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+// 1. 設定 Canvas 實際繪圖解析度（物理像素）
+canvas.width = width * dpr;
+canvas.height = height * dpr;
+
+// 2. 設定 Canvas 在網頁上的顯示尺寸（CSS 像素）
+canvas.style.width = width + 'px';
+canvas.style.height = height + 'px';
+
+// 3. 縮放繪圖上下文，確保繪製座標與 CSS 像素一致
+const ctx = canvas.getContext('2d');
+ctx.scale(dpr, dpr);
+2. 如果使用了 2D/3D 渲染引擎
+Phaser: 在設定檔中開啟 resolution: window.devicePixelRatio。
+
+PixiJS: 建立應用程式時設定 resolution: window.devicePixelRatio 並開啓 autoDensity: true。
+
+Three.js: 設定 renderer.setPixelRatio(window.devicePixelRatio)。
+
+3. 設定 CSS 抗鋸齒與渲染樣式
+在 CSS 中針對 Canvas 或高密度圖片補上渲染屬性：
+
+CSS
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
