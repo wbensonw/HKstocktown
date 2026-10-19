@@ -603,6 +603,10 @@ export function createWorld(parent) {
     MIDDLE: THREE.MOUSE.DOLLY,
     RIGHT: THREE.MOUSE.PAN,
   };
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  };
 
   const fill = new THREE.AmbientLight(0xfff4e6, 0.34);
   scene.add(fill);
@@ -665,12 +669,13 @@ export function createWorld(parent) {
   let lastSession = null;
 
   function resize() {
-    const width = window.innerWidth;
-    const height = Math.max(1, window.innerHeight);
+    const viewport = window.visualViewport;
+    const width = Math.round(viewport?.width || window.innerWidth);
+    const height = Math.max(1, Math.round(viewport?.height || window.innerHeight));
     const aspect = width / height;
     const wide = Math.max(0, aspect - 1.7);
     camera.aspect = aspect;
-    camera.fov = Math.max(24, 34 - wide * 10);
+    camera.fov = aspect < 1 ? 46 : Math.max(24, 34 - wide * 10);
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, width < 800 ? 1.15 : 1.5));
     renderer.setSize(width, height);
@@ -680,7 +685,8 @@ export function createWorld(parent) {
   function overviewFrame() {
     const aspect = camera.aspect || (window.innerWidth / Math.max(1, window.innerHeight));
     const wide = Math.max(0, aspect - 1.7);
-    const scale = 1 - Math.min(0.16, wide * 0.12);
+    const narrow = Math.max(0, 1 - aspect);
+    const scale = (1 - Math.min(0.16, wide * 0.12)) * (1 + narrow * 0.42);
     return {
       position: new THREE.Vector3(16 * scale, 22 * scale, 22 * scale),
       target: new THREE.Vector3(0, 1.4, 4),

@@ -346,6 +346,7 @@ canvas.addEventListener('click', (event) => {
   if (!hit) return;
   noteActivity();
   if (hit.type === 'stock' || hit.type === 'reader') {
+    hud.showQuote();
     focus = hit.index;
     zone = 'hall';
     panel = { type: 'stock', index: hit.index };
@@ -366,10 +367,12 @@ world.controls.addEventListener('start', () => {
   glide = 0;
   noteActivity();
 });
-window.addEventListener('resize', () => {
+function onResize() {
   world.resize();
   if (!touring && zone === 'hall' && focus < 0) aim();
-});
+}
+window.addEventListener('resize', onResize);
+window.visualViewport?.addEventListener('resize', onResize);
 
 async function refresh() {
   raw = await fetchMarket();

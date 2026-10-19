@@ -12,6 +12,12 @@ export function createHud(root) {
       <button data-action="toggleDisplay" type="button">展覽介面</button>
       <button data-action="toggleTour" type="button">巡遊</button>
     </div>
+    <nav class="phone-nav" id="phone-nav">
+      <button data-action="phoneTab" data-value="scene" type="button">茶樓</button>
+      <button data-action="phoneTab" data-value="detail" type="button">報價</button>
+      <button data-action="phoneTab" data-value="rank" type="button">個股</button>
+      <button data-action="phoneTab" data-value="controls" type="button">操作</button>
+    </nav>
     <div class="banner" id="banner"></div>
     <div class="ticker" id="ticker" hidden></div>
     <div class="bubbles" id="bubbles"></div>
@@ -23,6 +29,18 @@ export function createHud(root) {
     root.querySelector('#bubbles').appendChild(node);
     bubbles.set(id, node);
   });
+
+  let phoneTab = 'scene';
+  document.body.dataset.phone = phoneTab;
+
+  function setPhoneTab(tab) {
+    phoneTab = tab;
+    document.body.dataset.phone = phoneTab;
+    root.querySelectorAll('[data-action="phoneTab"]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.value === phoneTab);
+    });
+  }
+  setPhoneTab('scene');
 
   const controls = root.querySelector('#controls');
   controls.innerHTML = `
@@ -58,7 +76,11 @@ export function createHud(root) {
       if (action === 'speed') actions.setSpeed(Number(button.dataset.value));
       else if (action === 'hour') actions.nudgeHour(Number(button.dataset.value));
       else if (action === 'rank') actions.setRank(button.dataset.value);
-      else if (action === 'stock') actions.focusStock(Number(button.dataset.value));
+      else if (action === 'phoneTab') setPhoneTab(button.dataset.value);
+      else if (action === 'stock') {
+        setPhoneTab('detail');
+        actions.focusStock(Number(button.dataset.value));
+      }
       else if (action === 'addStock') actions.addStock(root.querySelector('#universe-code')?.value);
       else if (action === 'removeStock') actions.removeStock(button.dataset.value);
       else actions[action]?.();
@@ -129,7 +151,7 @@ export function createHud(root) {
     });
   }
 
-  return { bind, render, setBubbles };
+  return { bind, render, setBubbles, showQuote: () => setPhoneTab('detail') };
 }
 
 function tickerHtml(state) {

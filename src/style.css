@@ -14,6 +14,7 @@
 html, body {
   margin: 0;
   height: 100%;
+  height: 100dvh;
   background: #3a4d78;
   color: var(--ink);
   overflow: hidden;
@@ -25,6 +26,7 @@ html, body {
   width: 100%;
   height: 100%;
   display: block;
+  touch-action: none;
 }
 
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
@@ -191,6 +193,17 @@ dd { margin: 0; }
 }
 .stage button { font-size: 13px; padding: 6px 14px; }
 
+.phone-nav {
+  display: none;
+  pointer-events: auto;
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  z-index: 4;
+  gap: 6px;
+}
+
 .bubbles { position: fixed; inset: 0; pointer-events: none; }
 .bubble {
   position: absolute;
@@ -222,12 +235,35 @@ dd { margin: 0; }
 }
 #loading.hide { opacity: 0; visibility: hidden; pointer-events: none; }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
   .banner { display: none; }
-  .rank { top: auto; right: 10px; left: 10px; bottom: 168px; width: auto; max-height: 132px; }
-  .detail { left: 10px; right: 10px; bottom: 10px; width: auto; max-height: 150px; }
-  .controls { top: 10px; right: 10px; bottom: auto; left: auto; width: min(100% - 20px, 430px); }
-  .top-card { max-width: calc(100% - 20px); }
-  .top-card .legend { display: none; }
-  .stage { bottom: 308px; }
+  .phone-nav { display: flex; }
+  .phone-nav button { flex: 1; min-height: 40px; }
+  button { min-height: 40px; }
+  ol li button[data-action="removeStock"] { width: 40px; height: 40px; min-height: 40px; }
+  .keys { display: none; }
+  .top-card {
+    top: calc(8px + env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    width: auto;
+    padding: 10px 12px;
+  }
+  .top-card h1, .top-card .index-line { font-size: 22px; }
+  .top-card .legend, .top-card .meta, .top-card p:last-child { display: none; }
+  .stage { bottom: calc(58px + env(safe-area-inset-bottom)); }
+  .rank, .detail, .controls {
+    top: auto;
+    left: 10px;
+    right: 10px;
+    bottom: calc(112px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: 42vh;
+  }
+  body:not([data-phone="rank"]) .rank,
+  body:not([data-phone="detail"]) .detail,
+  body:not([data-phone="controls"]) .controls { display: none; }
+  body.display .rank,
+  body.display .controls { display: none; }
+  body.display.admin[data-phone="rank"] .rank { display: block; }
 }

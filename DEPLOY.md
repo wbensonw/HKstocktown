@@ -43,6 +43,8 @@ npx wrangler deploy
 第一次可能會問要不要建立專案，選是。完成後終端機會印出一行網址，樣子像：
 
 `https://hk-teahouse-api.你的帳號.workers.dev`
+https://hk-teahouse-api.wbensonw.workers.dev
+
 
 把這整行抄下來。不要在後面加上 `/api/market`，也不要留最後的 `/`。
 
