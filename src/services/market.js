@@ -4,8 +4,10 @@ import { mockMarket } from './mock.js';
 export async function fetchMarket() {
   const codes = getUniverse().map((stock) => stock.symbol).join(',');
   const apiBase = String(import.meta.env.VITE_MARKET_API || '').replace(/\/$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetch(`${apiBase}/api/market?codes=${codes}`);
+    const response = await fetch(`${apiBase}/api/market?codes=${codes}`, { signal: controller.signal });
     if (!response.ok) throw new Error(`報價服務回應 ${response.status}`);
     const data = await response.json();
     if (!data?.index?.price || !Array.isArray(data.stocks) || data.stocks.length < 1) {
@@ -14,7 +16,9 @@ export async function fetchMarket() {
     return data;
   } catch (error) {
     const data = mockMarket();
-    data.error = error?.message || '無法取得報價';
+    data.error = error?.name === 'AbortError' ? '報價逾時' : (error?.message || '無法取得報價');
     return data;
+  } finally {
+    clearTimeout(timer);
   }
 }

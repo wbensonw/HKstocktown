@@ -294,7 +294,9 @@ function minuteChart(minutes) {
   if (series.length < 2) return '<p class="meta">沒有當日分時</p>';
   const width = 320;
   const height = 96;
-  const xOf = (minute) => 8 + Math.min(1, Math.max(0, (minute - openMin) / (closeMin - openMin))) * (width - 16);
+  const plotLeft = 54;
+  const plotRight = width - 8;
+  const xOf = (minute) => plotLeft + Math.min(1, Math.max(0, (minute - openMin) / (closeMin - openMin))) * (plotRight - plotLeft);
   const prices = series.map((point) => point.price);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
@@ -310,7 +312,8 @@ function minuteChart(minutes) {
   const labels = ticks.map(([minute, label, anchor]) => `<text x="${xOf(minute).toFixed(1)}" y="90" text-anchor="${anchor}">${label}</text>`).join('');
   const dotX = xOf(last.minute).toFixed(1);
   const dotY = yOf(last.price).toFixed(1);
-  return `<svg class="spark minute" viewBox="0 0 ${width} ${height}" role="img" aria-label="當日分時股價"><line class="axis" x1="8" y1="74" x2="${width - 8}" y2="74" />${labels}<path class="${direction}" d="${path}" /><circle class="halo ${direction}" cx="${dotX}" cy="${dotY}" r="6.5" /><circle class="now ${direction}" cx="${dotX}" cy="${dotY}" r="3.2" /></svg>`;
+  const yAxis = `<line class="axis" x1="${plotLeft}" y1="8" x2="${plotLeft}" y2="70" /><text x="${plotLeft - 4}" y="14" text-anchor="end">${formatPrice(max)}</text><text x="${plotLeft - 4}" y="68" text-anchor="end">${formatPrice(min)}</text>`;
+  return `<svg class="spark minute" viewBox="0 0 ${width} ${height}" role="img" aria-label="當日分時股價"><line class="axis" x1="${plotLeft}" y1="74" x2="${plotRight}" y2="74" />${yAxis}${labels}<path class="${direction}" d="${path}" /><circle class="halo ${direction}" cx="${dotX}" cy="${dotY}" r="6.5" /><circle class="now ${direction}" cx="${dotX}" cy="${dotY}" r="3.2" /></svg>`;
 }
 
 function historyChart(history = []) {
@@ -322,7 +325,9 @@ function historyChart(history = []) {
   const volumeTop = 84;
   const volumeH = 36;
   const height = 142;
-  const slot = (width - 16) / bars.length;
+  const plotLeft = 54;
+  const plotRight = width - 8;
+  const slot = (plotRight - plotLeft) / bars.length;
   const highOf = (bar) => bar.high ?? Math.max(bar.open ?? bar.close, bar.close);
   const lowOf = (bar) => bar.low ?? Math.min(bar.open ?? bar.close, bar.close);
   const min = Math.min(...bars.map(lowOf));
@@ -334,7 +339,7 @@ function historyChart(history = []) {
     const open = bar.open ?? bar.close;
     const up = bar.close >= open;
     const mood = up ? 'up' : 'down';
-    const x = 8 + slot * index + slot / 2;
+    const x = plotLeft + slot * index + slot / 2;
     const bodyTop = yOf(Math.max(open, bar.close));
     const bodyHeight = Math.max(1.4, yOf(Math.min(open, bar.close)) - bodyTop);
     const volumeHeight = Math.max(1.5, ((bar.turnover || 0) / maxTurnover) * (volumeH - 2));
@@ -342,10 +347,13 @@ function historyChart(history = []) {
   }).join('');
   const labels = [0, Math.floor((bars.length - 1) / 2), bars.length - 1].map((index, order) => {
     const anchor = ['start', 'middle', 'end'][order];
-    const x = 8 + slot * index + slot / 2;
+    const x = plotLeft + slot * index + slot / 2;
     return `<text x="${x.toFixed(1)}" y="136" text-anchor="${anchor}">${shortDate(bars[index].date)}</text>`;
   }).join('');
-  return `<svg class="spark combo" viewBox="0 0 ${width} ${height}" role="img" aria-label="近 30 日股價與成交額"><line class="axis" x1="8" y1="${volumeTop + volumeH}" x2="${width - 8}" y2="${volumeTop + volumeH}" />${marks}${labels}</svg>`;
+  const yTop = yOf(max);
+  const yBottom = yOf(min);
+  const yAxis = `<line class="axis" x1="${plotLeft}" y1="${yTop.toFixed(1)}" x2="${plotLeft}" y2="${yBottom.toFixed(1)}" /><text x="${plotLeft - 4}" y="${(yTop + 10).toFixed(1)}" text-anchor="end">${formatPrice(max)}</text><text x="${plotLeft - 4}" y="${yBottom.toFixed(1)}" text-anchor="end">${formatPrice(min)}</text>`;
+  return `<svg class="spark combo" viewBox="0 0 ${width} ${height}" role="img" aria-label="近 30 日股價與成交額"><line class="axis" x1="${plotLeft}" y1="${volumeTop + volumeH}" x2="${plotRight}" y2="${volumeTop + volumeH}" />${yAxis}${marks}${labels}</svg>`;
 }
 
 function bannerHtml(state) {

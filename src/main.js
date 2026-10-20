@@ -2,6 +2,7 @@ import { getUniverse, resetUniverse as clearUniverse, setUniverse, stockFromCode
 import { paletteOf } from './config/palette.js';
 import { effectiveSession, hkParts } from './config/sessions.js';
 import { fetchMarket } from './services/market.js';
+import { mockMarket } from './services/mock.js';
 import { presentMarket } from './services/present.js';
 import { createWorld } from './scene/teaHouse.js';
 import { createHud } from './ui/hud.js';
@@ -16,7 +17,8 @@ try {
   throw error;
 }
 
-let raw = null;
+let raw = mockMarket();
+let drawing = true;
 let biasMs = 0;
 let simMs = 0;
 let frozen = null;
@@ -381,7 +383,13 @@ refresh();
 setInterval(refresh, 60_000);
 
 let last = performance.now();
+function stopDrawing(message) {
+  drawing = false;
+  loading.classList.remove('hide');
+  loading.textContent = message;
+}
 function frame(now) {
+  if (!drawing) return;
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   if (raw) {
@@ -425,7 +433,12 @@ function frame(now) {
       glide -= dt;
     }
     world.controls.update();
-    world.render();
+    try {
+      world.render();
+    } catch (error) {
+      stopDrawing('這部裝置畫不出茶樓，請關閉其他分頁再試。');
+      return;
+    }
     if (world.consumeBell()) chime();
     hud.setBubbles(world.bubbles().map((item) => {
       const pos = world.project(item.object);

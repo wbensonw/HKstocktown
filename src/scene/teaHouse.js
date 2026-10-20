@@ -614,6 +614,12 @@ function buildLife(scene) {
   };
 }
 
+function appleTouch() {
+  const agent = navigator.userAgent || '';
+  return /iPhone|iPad|iPod|CriOS/.test(agent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function drawingRatio(width) {
   const density = window.devicePixelRatio || 1;
   if (width < 900) return Math.min(3, Math.max(density, 2));
@@ -626,7 +632,11 @@ export function createWorld(parent) {
   scene.fog = new THREE.Fog('#f0c9a4', 55, 130);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 180);
   camera.position.set(16, 22, 22);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  const ios = appleTouch();
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: ios ? 'default' : 'high-performance',
+  });
   renderer.setPixelRatio(drawingRatio(window.innerWidth));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -635,6 +645,9 @@ export function createWorld(parent) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   parent.appendChild(renderer.domElement);
+  renderer.domElement.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+  });
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -701,7 +714,7 @@ export function createWorld(parent) {
   const composerTarget = new THREE.WebGLRenderTarget(
     Math.floor(window.innerWidth * renderer.getPixelRatio()),
     Math.floor(window.innerHeight * renderer.getPixelRatio()),
-    { samples: 4, type: THREE.HalfFloatType },
+    ios ? { type: THREE.HalfFloatType } : { samples: 4, type: THREE.HalfFloatType },
   );
   const composer = new EffectComposer(renderer, composerTarget);
   composer.addPass(new RenderPass(scene, camera));
@@ -717,6 +730,7 @@ export function createWorld(parent) {
   const projected = new THREE.Vector3();
   const forward = new THREE.Vector3();
   let lastSession = null;
+  const renderState = { plain: false };
 
   function resize() {
     const frame = renderer.domElement.parentElement;
@@ -889,7 +903,20 @@ export function createWorld(parent) {
     controls,
     resize,
     update,
-    render: () => composer.render(),
+    render() {
+      const context = renderer.getContext();
+      if (context?.isContextLost?.()) throw new Error('WebGL context lost');
+      if (renderState.plain) {
+        renderer.render(scene, camera);
+        return;
+      }
+      try {
+        composer.render();
+      } catch (error) {
+        renderState.plain = true;
+        renderer.render(scene, camera);
+      }
+    },
     pick,
     project,
     pose: tablePose,
