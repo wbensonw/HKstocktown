@@ -1,82 +1,195 @@
 import * as THREE from 'three';
 import { basic, box, cyl, lambert, put, sphere } from './geom.js';
-import { createBoard, drawNote, roundRect } from './labels.js';
-import { createPerson, poseSit } from './people.js';
+import { createBoard, roundRect, sharpCanvasTexture } from './labels.js';
+import { createPerson, eatPerson, queueIdle, washPerson } from './people.js';
+
+function drawAlleySign(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#4f6d5c';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#6d8b78';
+  ctx.fillRect(36, 28, w * 0.46, h * 0.38);
+  ctx.fillStyle = 'rgba(34, 42, 36, 0.35)';
+  for (let index = 0; index < 8; index += 1) {
+    ctx.fillRect(48 + index * 88, 16, 5, 26 + (index % 3) * 22);
+  }
+  const rust = ['#8a4b2a', '#6e3a22', '#a15a32'];
+  [[54, 40, 26], [w - 80, 36, 22], [w * 0.48, h - 46, 18], [150, h * 0.62, 14], [w - 160, h * 0.42, 20]].forEach(([x, y, r], index) => {
+    ctx.fillStyle = rust[index % rust.length];
+    ctx.globalAlpha = 0.62;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.72, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(236, 226, 198, 0.38)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(30, 90);
+  ctx.lineTo(w - 40, 140);
+  ctx.moveTo(70, h - 36);
+  ctx.lineTo(w - 90, 70);
+  ctx.stroke();
+  ctx.fillStyle = '#f4ecdc';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 92px "Microsoft JhengHei", sans-serif';
+  ctx.fillText('後巷洗大餅', w / 2 + 8, h * 0.54);
+  ctx.globalCompositeOperation = 'destination-out';
+  [[168, 78, 18, 12], [390, 96, 26, 10], [250, 150, 14, 16], [520, 128, 20, 11], [120, 118, 12, 14], [610, 150, 16, 9]].forEach(([x, y, rw, rh]) => {
+    ctx.fillRect(x, y, rw, rh);
+  });
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#3c342e';
+  [[28, 24], [w - 28, 24], [28, h - 24], [w - 28, h - 24]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.strokeStyle = '#3a463c';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(8, 8, w - 16, h - 16);
+}
+
+function makeTinSign() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 768;
+  canvas.height = 332;
+  drawAlleySign(canvas.getContext('2d'), 768, 332);
+  const material = new THREE.MeshBasicMaterial({
+    map: sharpCanvasTexture(canvas),
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  const group = new THREE.Group();
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 1.25), material);
+  face.position.z = 0.03;
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 1.25), material);
+  back.rotation.y = Math.PI;
+  back.position.z = -0.03;
+  group.add(face, back);
+  const rust = lambert('#6a4634');
+  put(group, box(3.05, 0.07, 0.05), rust, 0, 0.66, 0);
+  put(group, box(3.05, 0.07, 0.05), rust, 0, -0.66, 0);
+  put(group, box(0.07, 1.34, 0.05), rust, 1.5, 0, 0);
+  put(group, box(0.07, 1.34, 0.05), rust, -1.5, 0, 0);
+  return group;
+}
+
+function sinkSplashes(parent, x, z) {
+  const count = 16;
+  const positions = new Float32Array(count * 3);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const points = new THREE.Points(geometry, new THREE.PointsMaterial({
+    color: '#d7f2f8',
+    size: 0.04,
+    transparent: true,
+    opacity: 0.8,
+    depthWrite: false,
+  }));
+  points.position.set(x, 0.9, z);
+  parent.add(points);
+  return {
+    positions,
+    geometry,
+    seeds: Array.from({ length: count }, () => Math.random()),
+    spread: Array.from({ length: count }, () => [(Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 0.28]),
+  };
+}
 
 export function createAlley() {
   const root = new THREE.Group();
-  root.position.set(-14.0, 0, -3.4);
+  root.position.set(-15.2, 0, -4.2);
   const wet = new THREE.MeshLambertMaterial({
     color: '#343a34',
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
   });
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.06, 6.4), wet);
-  floor.position.y = 0.09;
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(6, 0.06, 8), wet);
+  floor.position.set(0.6, 0.09, 0);
   floor.receiveShadow = true;
   root.add(floor);
-  [[-0.7, 0.4], [0.5, -0.8], [0.2, 1.6]].forEach(([x, z]) => {
-    put(root, box(0.55, 0.02, 0.35), lambert('#2a312c'), x, 0.13, z);
+  [[-1.1, 0.2], [0.8, -1.1], [0.2, 1.8], [-0.6, 2.6]].forEach(([x, z]) => {
+    put(root, box(0.6, 0.02, 0.38), lambert('#2a312c'), x, 0.13, z);
   });
-  put(root, box(0.16, 2.2, 6.2), lambert('#6e5a48'), -1.55, 1.15, 0, null, true);
-  for (let row = 0; row < 5; row += 1) {
-    put(root, box(0.04, 0.28, 1.05), lambert(row % 2 ? '#d5ddd8' : '#e7eeea'), -1.42, 0.55 + row * 0.32, 0.2);
+  put(root, box(0.16, 2.35, 7.6), lambert('#6e5a48'), -2.25, 1.22, 0, null, true);
+  for (let row = 0; row < 6; row += 1) {
+    put(root, box(0.04, 0.28, 1.2), lambert(row % 2 ? '#d5ddd8' : '#e7eeea'), -2.12, 0.48 + row * 0.3, 0.5);
   }
-  put(root, box(4.2, 0.7, 0.7), lambert('#8d9498'), -0.2, 0.55, -2.6, null, true);
-  put(root, box(3.6, 0.08, 0.55), lambert('#d5dbde'), -0.2, 0.92, -2.6);
-  put(root, cyl(0.04, 0.04, 0.55, 8), lambert('#d5e7ea'), 1.15, 0.85, -2.55);
-  put(root, cyl(0.035, 0.02, 0.35, 8), lambert('#9fd8ea'), 1.15, 0.42, -2.15);
-  put(root, box(1.3, 0.9, 0.35), lambert('#b7c0c4'), 1.35, 0.7, -1.2);
+  put(root, box(5.2, 0.62, 0.72), lambert('#8d9498'), 0.5, 0.5, -3.15, null, true);
+  put(root, box(5, 0.06, 0.52), lambert('#d5dbde'), 0.5, 0.84, -3.15);
+  put(root, cyl(0.04, 0.04, 0.5, 8), lambert('#d5e7ea'), 1.75, 0.78, -2.95);
+  put(root, cyl(0.035, 0.02, 0.32, 8), lambert('#9fd8ea'), 1.75, 0.4, -2.7);
+  put(root, box(4.5, 0.55, 0.62), lambert('#8d9498'), 0.3, 0.46, 2.2, null, true);
+  put(root, box(4.3, 0.05, 0.46), lambert('#d5dbde'), 0.3, 0.76, 2.2);
+  put(root, box(1.15, 0.9, 0.32), lambert('#b7c0c4'), 2.05, 0.7, -0.8);
   for (let shelf = 0; shelf < 3; shelf += 1) {
-    put(root, box(1.15, 0.04, 0.32), lambert('#d7dee2'), 1.35, 1.15 + shelf * 0.28, -1.2);
+    put(root, box(1.05, 0.04, 0.3), lambert('#d7dee2'), 2.05, 1.15 + shelf * 0.28, -0.8);
   }
   for (let level = 0; level < 4; level += 1) {
-    put(root, cyl(0.16, 0.14, 0.05, 12), lambert(level % 2 ? '#f4f7f8' : '#d5e1e4'), 1.35, 1.2 + level * 0.06, -1.2);
+    put(root, cyl(0.16, 0.14, 0.05, 12), lambert(level % 2 ? '#f4f7f8' : '#d5e1e4'), 2.05, 1.2 + level * 0.06, -0.8);
   }
-  put(root, box(0.9, 1.3, 0.08), lambert('#d7c4a2'), -2.2, 1.5, 1.4);
+  put(root, box(0.9, 1.35, 0.08), lambert('#d7c4a2'), -2.55, 1.55, 1.2);
 
-  const sign = createBoard(512, 220, 2.1, 0.86);
-  sign.mesh.position.set(0.4, 1.85, -3.3);
-  sign.redraw('alley', (ctx, w, h) => drawNote(ctx, w, h, ['後巷', '洗大餅']));
-  root.add(sign.mesh);
+  const hanger = new THREE.Group();
+  hanger.position.set(0.8, 0, -3.85);
+  [-1.45, 1.45].forEach((x) => {
+    put(hanger, box(0.07, 1.7, 0.07), lambert('#5c4638'), x, 1.15, -0.06);
+  });
+  const sign = makeTinSign();
+  sign.position.set(0, 1.85, 0);
+  hanger.add(sign);
+  root.add(hanger);
 
-  const people = Array.from({ length: 8 }, (_, index) => {
+  const people = Array.from({ length: 12 }, (_, index) => {
     const person = createPerson(index, '#6e8cab');
     person.visible = false;
     root.add(person);
     return person;
   });
-  const bowls = Array.from({ length: 8 }, (_, index) => {
+  const bowls = Array.from({ length: 12 }, (_, index) => {
     const stack = new THREE.Group();
     const height = 3 + (index % 3);
     for (let level = 0; level < height; level += 1) {
       put(stack, cyl(0.14, 0.12, 0.045, 12), lambert(level % 2 ? '#f7fbfc' : '#d7e3e6'), 0, 0.08 + level * 0.05, 0);
     }
-    stack.position.set(-0.4 + (index % 4) * 0.48, 0, 1.2 + Math.floor(index / 4) * 0.7);
+    stack.position.set(-1.55 + (index % 6) * 0.62, 0, -0.55 + Math.floor(index / 6) * 0.9);
     stack.visible = false;
     root.add(stack);
     return stack;
   });
+  const splashes = [sinkSplashes(root, 0.5, -3.15), sinkSplashes(root, 0.3, 2.2)];
 
   return {
     root,
     setCounts(peopleCount, bowlCount) {
+      const time = performance.now() / 1000;
       people.forEach((person, index) => {
         person.visible = index < peopleCount;
         if (!person.visible) return;
-        const { legs, rig } = person.userData;
-        if (legs && rig) {
-          legs[0].rotation.x = 0.7;
-          legs[1].rotation.x = 0.55;
-          rig.position.y = -0.16;
-          rig.rotation.x = 0.35;
-        }
-        person.position.set(-1.3 + (index % 4) * 0.7, 0, -0.2 + Math.floor(index / 4) * 0.85);
-        person.rotation.y = -0.6;
+        const col = index % 6;
+        const back = index < 6;
+        person.position.set(-1.35 + col * 0.78, 0, back ? -2.45 : 1.55);
+        person.rotation.y = back ? Math.PI : 0;
+        washPerson(person, time, index);
       });
       bowls.forEach((stack, index) => {
         stack.visible = index < bowlCount;
+      });
+      splashes.forEach((splash) => {
+        splash.seeds.forEach((seed, index) => {
+          const next = peopleCount > 0 ? (seed + 0.012 + (index % 3) * 0.004) % 1 : seed;
+          splash.seeds[index] = next;
+          const [x, z] = splash.spread[index];
+          splash.positions[index * 3] = x;
+          splash.positions[index * 3 + 1] = peopleCount > 0 ? next * 0.45 : -4;
+          splash.positions[index * 3 + 2] = z;
+        });
+        splash.geometry.attributes.position.needsUpdate = true;
       });
     },
   };
@@ -118,70 +231,57 @@ function cafeTable(parent, x, z) {
 
 export function createRiceStall() {
   const root = new THREE.Group();
-  root.position.set(-13.4, 0, 6.05);
+  root.position.set(-14.6, 0, 5.7);
   const wall = lambert('#3e4652');
   const trim = lambert('#2a3038');
-  const glass = new THREE.MeshLambertMaterial({
-    color: '#ffe3a8',
-    emissive: '#ffbf62',
-    emissiveIntensity: 0.45,
-    transparent: true,
-    opacity: 0.42,
-  });
   const yellow = lambert('#f0b429');
 
-  put(root, box(4.7, 0.14, 3.05), lambert('#5a5148'), 0, 0.07, -0.15, null, true);
-  put(root, box(4.25, 0.05, 2.35), lambert('#f6d7a4'), 0, 0.16, -0.28);
-  put(root, box(0.12, 2.2, 2.55), wall, -2.2, 1.22, -0.28, null, true);
-  put(root, box(0.12, 2.2, 2.55), wall, 2.2, 1.22, -0.28, null, true);
-  put(root, box(4.45, 2.2, 0.12), wall, 0, 1.22, -1.52, null, true);
-  put(root, box(4.8, 0.14, 2.15), trim, 0, 2.28, -0.48, null, true);
-  put(root, box(4.75, 0.62, 0.34), trim, 0, 2.42, 0.92, null, true);
-  put(root, box(4.55, 0.08, 0.5), wall, 0, 2.05, 1.02);
-  put(root, box(3.5, 0.1, 0.7), yellow, 0, 2.4, 0.78);
-  [-1.45, 1.45].forEach((x) => {
-    put(root, box(1.15, 1.42, 0.035), glass, x, 1.18, 1.02);
-  });
-  put(root, box(1.05, 0.62, 0.035), glass, 0, 1.52, 1.02);
-  put(root, box(0.92, 1.05, 0.05), yellow, 0, 0.78, 1.03);
-  put(root, box(0.62, 0.72, 0.02), glass, 0, 0.9, 1.07);
-  put(root, sphere(0.035, 8, 6), basic('#fff6d0'), 0.28, 0.82, 1.08);
+  put(root, box(6, 0.14, 3.7), lambert('#5a5148'), 0, 0.07, -0.35, null, true);
+  put(root, box(5.5, 0.05, 2.9), lambert('#f6d7a4'), 0, 0.16, -0.45);
+  put(root, box(0.12, 2.35, 3.05), wall, -2.94, 1.28, -0.55, null, true);
+  put(root, box(0.12, 2.35, 3.05), wall, 2.94, 1.28, -0.55, null, true);
+  put(root, box(5.78, 2.35, 0.12), wall, 0, 1.28, -2.05, null, true);
+  put(root, box(6.15, 0.14, 2.9), trim, 0, 2.48, -0.55, null, true);
+  put(root, box(0.85, 1.75, 0.1), wall, -2.35, 0.98, 1.18);
+  put(root, box(0.85, 1.75, 0.1), wall, 2.35, 0.98, 1.18);
   [-0.72, 0.72].forEach((x) => {
-    put(root, box(0.06, 1.55, 0.07), trim, x, 1.15, 1.05);
+    put(root, box(0.08, 1.7, 0.08), trim, x, 0.95, 1.22);
   });
-  put(root, box(4.35, 0.06, 0.07), trim, 0, 0.46, 1.05);
-  put(root, box(4.35, 0.06, 0.07), trim, 0, 1.88, 1.05);
-  [-1.45, 0, 1.45].forEach((x) => {
-    put(root, cyl(0.05, 0.05, 0.04, 8), basic('#fff1c2'), x, 1.98, 1.12);
+  put(root, box(1.52, 0.08, 0.08), trim, 0, 1.76, 1.22);
+  put(root, box(5.7, 0.08, 0.08), trim, 0, 1.9, 1.2);
+  [-1.9, 0, 1.9].forEach((x) => {
+    put(root, cyl(0.05, 0.05, 0.04, 8), basic('#fff1c2'), x, 2.08, 1.28);
   });
 
-  [-1.15, 0.15, 1.25].forEach((x) => cafeTable(root, x, -0.72));
+  [[-1.45, -0.5], [0.15, -0.5], [1.75, -1.35], [-0.75, -1.45]].forEach(([x, z]) => cafeTable(root, x, z));
   const seats = [
-    [-1.45, -0.95, 0.5],
-    [-0.85, -0.38, 2.5],
-    [-0.15, -1.05, 0.25],
-    [0.5, -0.38, 2.7],
-    [0.95, -0.98, -0.2],
-    [1.55, -0.4, 2.4],
+    [-1.8, -0.82, 0.45],
+    [-1.05, -0.15, 2.5],
+    [-0.2, -0.85, 0.25],
+    [0.55, -0.15, 2.6],
+    [1.4, -1.68, 0.35],
+    [2.15, -1.05, 2.3],
+    [-1.1, -1.78, 0.2],
+    [-0.35, -1.1, 2.55],
   ];
   seats.forEach(([x, z, rotation]) => cafeChair(root, x, z, rotation));
-  put(root, box(1.25, 0.62, 0.38), lambert('#f4f1ea'), 1.4, 0.48, -1.15, null, true);
-  put(root, box(0.7, 0.04, 0.22), lambert('#d7c4a2'), 1.4, 0.82, -1.15);
+  put(root, box(1.45, 0.62, 0.4), lambert('#f4f1ea'), 1.85, 0.48, -1.65, null, true);
+  put(root, box(0.85, 0.04, 0.24), lambert('#d7c4a2'), 1.85, 0.82, -1.65);
 
   const staff = createPerson(1, '#f7f4ea', { apron: true });
-  staff.position.set(0.55, 0, 0.15);
+  staff.position.set(0.45, 0, -0.15);
   put(staff, box(0.14, 0.18, 0.025), yellow, 0, 0.46, 0.09);
   put(staff, cyl(0.1, 0.11, 0.05, 10), yellow, 0, 0.84, 0);
   put(staff, box(0.16, 0.02, 0.1), lambert('#f7f4ea'), 0.18, 0.5, 0.06);
   put(staff, cyl(0.05, 0.05, 0.02, 8), lambert('#f4efe4'), 0.18, 0.53, 0.06);
   root.add(staff);
 
-  const glow = new THREE.PointLight(0xffc56a, 0.55, 7, 2);
-  glow.position.set(0, 1.8, -0.2);
+  const glow = new THREE.PointLight(0xffc56a, 0.55, 8, 2);
+  glow.position.set(0, 1.9, -0.2);
   root.add(glow);
 
-  const sign = createBoard(768, 280, 3.15, 1.12);
-  sign.mesh.position.set(0, 2.52, 1.12);
+  const sign = createBoard(768, 280, 3.4, 1.2);
+  sign.mesh.position.set(0, 3.2, 1.55);
   sign.mesh.userData.pick = { type: 'rice-sign' };
   sign.redraw('cafe', drawCafeSign);
   root.add(sign.mesh);
@@ -191,32 +291,36 @@ export function createRiceStall() {
     person.position.set(x, 0.2, z);
     person.rotation.y = rotation;
     person.visible = false;
-    poseSit(person);
     root.add(person);
     return person;
   });
-  const queue = Array.from({ length: 14 }, (_, index) => {
-    const person = createPerson(index + 8);
+  const queue = Array.from({ length: 10 }, (_, index) => {
+    const person = createPerson(index + 12);
     person.visible = false;
     root.add(person);
     return person;
   });
+  const doorPoint = new THREE.Vector3();
 
   return {
     root,
-    setQueue(count) {
-      const total = Math.max(0, count);
+    setCrowd(seated, queueCount) {
+      const time = performance.now() / 1000;
+      queueIdle(staff, time, 2);
+      staff.userData.rig.position.y = 0;
       inside.forEach((person, index) => {
-        person.visible = index < total;
+        person.visible = index < seated;
+        if (person.visible) eatPerson(person, time, index);
       });
+      root.updateWorldMatrix(true, false);
+      doorPoint.set(0, 0.7, 1.15);
+      root.localToWorld(doorPoint);
       queue.forEach((person, index) => {
-        const place = index + inside.length;
-        person.visible = place < total;
+        person.visible = index < queueCount;
         if (!person.visible) return;
-        const column = index % 7;
-        const row = Math.floor(index / 7);
-        person.position.set(-2.35 - column * 0.4, 0, 1.35 + row * 0.42);
-        person.rotation.y = -Math.PI / 2;
+        person.position.set(1.05 + index * 0.48, 0, 1.32);
+        person.lookAt(doorPoint);
+        queueIdle(person, time, index);
       });
     },
   };

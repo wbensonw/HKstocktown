@@ -27,30 +27,143 @@ function bench(scene, x, z, rotation = 0) {
   scene.add(group);
 }
 
-function makeCar(color) {
-  const car = new THREE.Group();
-  const trim = lambert('#2a2e33');
-  put(car, box(1.05, 0.22, 0.68), lambert(color), 0.02, 0.32, 0, null, true);
-  put(car, box(0.42, 0.16, 0.66), lambert(color), 0.48, 0.28, 0);
-  put(car, box(0.28, 0.14, 0.66), lambert(color), -0.48, 0.28, 0);
-  put(car, box(0.52, 0.22, 0.58), lambert('#d7e6ee'), 0.02, 0.52, 0);
-  put(car, box(0.04, 0.14, 0.5), lambert('#9fd0ea'), 0.28, 0.54, 0);
-  put(car, box(1.28, 0.06, 0.72), trim, 0, 0.2, 0);
-  put(car, box(0.08, 0.08, 0.7), lambert('#c5ccd2'), 0.66, 0.24, 0);
-  put(car, box(0.08, 0.08, 0.7), lambert('#8d9398'), -0.66, 0.24, 0);
-  put(car, box(0.05, 0.08, 0.16), basic('#fff6d0'), 0.7, 0.36, 0.22);
-  put(car, box(0.05, 0.08, 0.16), basic('#fff6d0'), 0.7, 0.36, -0.22);
-  put(car, box(0.04, 0.06, 0.12), basic('#ff3b3b'), -0.7, 0.36, 0.22);
-  put(car, box(0.04, 0.06, 0.12), basic('#ff3b3b'), -0.7, 0.36, -0.22);
-  put(car, box(0.08, 0.05, 0.12), lambert('#d5e2ea'), 0.18, 0.64, 0.32);
-  put(car, box(0.08, 0.05, 0.12), lambert('#d5e2ea'), 0.18, 0.64, -0.32);
-  [-0.4, 0.42].forEach((x) => {
-    [-0.36, 0.36].forEach((z) => {
-      put(car, cyl(0.13, 0.13, 0.08, 12), lambert('#1c1c1c'), x, 0.13, z, [Math.PI / 2, 0, 0]);
-      put(car, cyl(0.06, 0.06, 0.09, 8), lambert('#8d9398'), x, 0.13, z, [Math.PI / 2, 0, 0]);
-    });
+function shade(hex, factor) {
+  const color = new THREE.Color(hex);
+  color.multiplyScalar(factor);
+  return `#${color.getHexString()}`;
+}
+
+function wheelAssembly() {
+  const wheel = new THREE.Group();
+  put(wheel, cyl(0.13, 0.13, 0.08, 14), lambert('#1c1c1c'), 0, 0, 0, [Math.PI / 2, 0, 0]);
+  put(wheel, cyl(0.09, 0.09, 0.086, 12), lambert('#3a4046'), 0, 0, 0, [Math.PI / 2, 0, 0]);
+  put(wheel, cyl(0.045, 0.045, 0.092, 8), lambert('#d5dbe2'), 0, 0, 0, [Math.PI / 2, 0, 0]);
+  return wheel;
+}
+
+function taxiRoof() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f0b429';
+  ctx.fillRect(0, 0, 128, 64);
+  ctx.fillStyle = '#3a2a10';
+  ctx.font = '700 36px "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('的士', 64, 34);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sign = new THREE.Group();
+  const material = new THREE.MeshBasicMaterial({ map: texture });
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.1), material);
+  front.position.z = 0.018;
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.1), material);
+  back.rotation.y = Math.PI;
+  back.position.z = -0.018;
+  sign.add(front, back);
+  put(sign, box(0.24, 0.12, 0.02), lambert('#e0a020'), 0, 0, 0);
+  return sign;
+}
+
+function addWheels(car, points) {
+  const wheels = points.map(([x, z]) => {
+    const wheel = wheelAssembly();
+    wheel.position.set(x, 0.13, z);
+    car.add(wheel);
+    return wheel;
   });
+  car.userData.wheels = wheels;
+}
+
+function makeSedan(color, kind) {
+  const car = new THREE.Group();
+  const paint = lambert(color);
+  const door = lambert(shade(color, 0.78));
+  const glass = lambert('#b7d4e4');
+  const trim = lambert('#2a2e33');
+  const chrome = lambert('#c5ccd2');
+  put(car, box(1.22, 0.05, 0.62), trim, 0, 0.18, 0);
+  put(car, box(1.02, 0.05, 0.035), trim, 0.02, 0.24, 0.34);
+  put(car, box(1.02, 0.05, 0.035), trim, 0.02, 0.24, -0.34);
+  put(car, box(0.08, 0.1, 0.7), chrome, 0.66, 0.28, 0);
+  put(car, box(0.07, 0.09, 0.64), trim, -0.64, 0.28, 0);
+  put(car, box(0.4, 0.07, 0.62), paint, 0.36, 0.36, 0, null, true);
+  put(car, box(0.3, 0.07, 0.62), paint, -0.4, 0.36, 0, null, true);
+  put(car, box(0.56, 0.14, 0.62), paint, 0.02, 0.4, 0, null, true);
+  put(car, box(0.42, 0.05, 0.54), paint, 0, 0.56, 0);
+  put(car, box(0.035, 0.14, 0.48), glass, 0.26, 0.5, 0);
+  put(car, box(0.03, 0.12, 0.44), glass, -0.22, 0.49, 0);
+  put(car, box(0.2, 0.1, 0.025), glass, 0.02, 0.5, 0.3);
+  put(car, box(0.2, 0.1, 0.025), glass, 0.02, 0.5, -0.3);
+  put(car, box(0.26, 0.16, 0.025), door, 0.02, 0.36, 0.325);
+  put(car, box(0.26, 0.16, 0.025), door, 0.02, 0.36, -0.325);
+  put(car, box(0.05, 0.018, 0.016), trim, 0.08, 0.38, 0.342);
+  put(car, box(0.05, 0.018, 0.016), trim, 0.08, 0.38, -0.342);
+  [[0.4, 0.33], [0.4, -0.33], [-0.38, 0.33], [-0.38, -0.33]].forEach(([x, z]) => {
+    put(car, box(0.24, 0.045, 0.05), door, x, 0.22, z);
+  });
+  [-0.08, 0, 0.08].forEach((z) => put(car, box(0.018, 0.05, 0.08), trim, 0.7, 0.34, z));
+  put(car, box(0.03, 0.055, 0.1), basic('#fff6d0'), 0.7, 0.36, 0.2);
+  put(car, box(0.03, 0.055, 0.1), basic('#fff6d0'), 0.7, 0.36, -0.2);
+  put(car, box(0.02, 0.028, 0.05), basic('#ffb15a'), 0.7, 0.29, 0.28);
+  put(car, box(0.02, 0.028, 0.05), basic('#ffb15a'), 0.7, 0.29, -0.28);
+  put(car, box(0.025, 0.05, 0.1), basic('#ff3b3b'), -0.68, 0.36, 0.2);
+  put(car, box(0.025, 0.05, 0.1), basic('#ff3b3b'), -0.68, 0.36, -0.2);
+  put(car, box(0.05, 0.035, 0.07), paint, 0.18, 0.5, 0.36);
+  put(car, box(0.05, 0.035, 0.07), paint, 0.18, 0.5, -0.36);
+  put(car, box(0.015, 0.05, 0.12), lambert('#f4efe4'), 0.705, 0.25, 0);
+  addWheels(car, [[0.4, 0.36], [0.4, -0.36], [-0.38, 0.36], [-0.38, -0.36]]);
+  if (kind === 'taxi') {
+    const sign = taxiRoof();
+    sign.position.set(0, 0.68, 0);
+    car.add(sign);
+  }
   return car;
+}
+
+function makeVan(color) {
+  const car = new THREE.Group();
+  const paint = lambert(color);
+  const door = lambert(shade(color, 0.78));
+  const glass = lambert('#b7d4e4');
+  const trim = lambert('#2a2e33');
+  put(car, box(1.32, 0.05, 0.66), trim, 0, 0.18, 0);
+  put(car, box(1.15, 0.05, 0.035), trim, -0.02, 0.26, 0.36);
+  put(car, box(1.15, 0.05, 0.035), trim, -0.02, 0.26, -0.36);
+  put(car, box(0.07, 0.12, 0.7), trim, 0.68, 0.32, 0);
+  put(car, box(0.07, 0.12, 0.66), trim, -0.68, 0.32, 0);
+  put(car, box(1.2, 0.22, 0.66), paint, -0.02, 0.38, 0, null, true);
+  put(car, box(1.05, 0.22, 0.62), paint, -0.04, 0.58, 0, null, true);
+  put(car, box(1.12, 0.045, 0.68), paint, -0.02, 0.72, 0);
+  put(car, box(0.03, 0.16, 0.52), glass, 0.5, 0.58, 0);
+  put(car, box(0.03, 0.14, 0.46), glass, -0.54, 0.56, 0);
+  [-0.22, 0.08, 0.34].forEach((x) => {
+    put(car, box(0.16, 0.1, 0.025), glass, x, 0.58, 0.325);
+    put(car, box(0.16, 0.1, 0.025), glass, x, 0.58, -0.325);
+  });
+  put(car, box(0.34, 0.2, 0.025), door, 0.02, 0.4, 0.34);
+  put(car, box(0.34, 0.2, 0.025), door, 0.02, 0.4, -0.34);
+  put(car, box(0.08, 0.012, 0.02), trim, 0.08, 0.42, 0.356);
+  put(car, box(1.05, 0.012, 0.02), trim, -0.02, 0.5, 0.345);
+  [[0.42, 0.35], [0.42, -0.35], [-0.46, 0.35], [-0.46, -0.35]].forEach(([x, z]) => {
+    put(car, box(0.22, 0.04, 0.05), door, x, 0.22, z);
+  });
+  [-0.08, 0, 0.08].forEach((z) => put(car, box(0.016, 0.05, 0.07), trim, 0.72, 0.4, z));
+  put(car, box(0.025, 0.06, 0.1), basic('#fff6d0'), 0.72, 0.42, 0.2);
+  put(car, box(0.025, 0.06, 0.1), basic('#fff6d0'), 0.72, 0.42, -0.2);
+  put(car, box(0.02, 0.05, 0.1), basic('#ff3b3b'), -0.72, 0.4, 0.2);
+  put(car, box(0.02, 0.05, 0.1), basic('#ff3b3b'), -0.72, 0.4, -0.2);
+  put(car, box(0.05, 0.04, 0.08), paint, 0.28, 0.62, 0.38);
+  put(car, box(0.05, 0.04, 0.08), paint, 0.28, 0.62, -0.38);
+  put(car, box(0.015, 0.05, 0.14), lambert('#f4efe4'), 0.725, 0.28, 0);
+  addWheels(car, [[0.42, 0.38], [0.42, -0.38], [-0.46, 0.38], [-0.46, -0.38]]);
+  return car;
+}
+
+function makeCar(color, kind) {
+  return kind === 'van' ? makeVan(color) : makeSedan(color, kind);
 }
 
 function addShoreHaze(scene) {
@@ -133,32 +246,33 @@ export function createBlock(scene) {
   lamp(scene, 8.6, 18.9);
 
   const park = new THREE.Group();
-  park.position.set(17.6, 0, 0);
-  put(park, box(10.4, 0.08, 12), lambert('#2d6b45'), 0, 0.02, 0, null, true);
-  put(park, box(1.2, 0.04, 10.4), pavement, -2.2, 0.08, 0);
+  park.position.set(17.6, 0, -0.45);
+  put(park, box(10.4, 0.08, 14.8), lambert('#2d6b45'), 0, 0.02, 0, null, true);
+  put(park, box(1.2, 0.04, 13), pavement, -2.2, 0.08, 0);
   put(park, box(7.2, 0.04, 1.1), pavement, 0.8, 0.08, -1.2);
   scene.add(park);
   tree(scene, 13.8, -4.6, 1.05);
-  tree(scene, 14.8, 4.6, 1.25);
-  tree(scene, 19.4, -5.2, 1.1);
+  tree(scene, 14.8, 5.8, 1.25);
+  tree(scene, 19.4, -6.3, 1.1);
   tree(scene, 21.6, -1.4, 1.15);
-  tree(scene, 22.0, 4.4, 0.95);
+  tree(scene, 22.0, 5.7, 0.95);
   bench(scene, 15.4, -2.2, 0.15);
   bench(scene, 19.6, 1.2, -0.25);
-  bench(scene, 17.2, 4.4, 1.15);
+  bench(scene, 17.2, 5.5, 1.15);
   lamp(scene, 13.6, 2.4);
   lamp(scene, 22.2, -3.2);
 
   const colors = ['#d4543c', '#e0a04a', '#3d6ea8', '#f2f4f6', '#3e8f6a', '#8a4d62', '#d7c4a3', '#6a4a34'];
   const cars = colors.map((color, index) => {
     const dir = index % 2 === 0 ? 1 : -1;
+    const kind = index === 0 ? 'taxi' : index === 4 ? 'van' : 'sedan';
     const spec = {
       lane: dir > 0 ? 11.5 : 13.85,
       dir,
       x: -16 + index * 4.2,
       color,
     };
-    const mesh = makeCar(spec.color);
+    const mesh = makeCar(spec.color, kind);
     mesh.position.set(spec.x, 0, spec.lane);
     mesh.rotation.y = spec.dir > 0 ? 0 : Math.PI;
     scene.add(mesh);
@@ -168,6 +282,7 @@ export function createBlock(scene) {
   return {
     update(dt, visibleCount = cars.length) {
       const shown = Math.max(0, Math.min(cars.length, visibleCount));
+      const spin = dt * 2.4 / 0.13;
       cars.forEach((car, index) => {
         car.mesh.visible = index < shown;
         if (!car.mesh.visible) return;
@@ -175,6 +290,9 @@ export function createBlock(scene) {
         if (car.x > 25.2) car.x = -21.2;
         if (car.x < -21.2) car.x = 25.2;
         car.mesh.position.x = car.x;
+        car.mesh.userData.wheels?.forEach((wheel) => {
+          wheel.rotation.z -= spin;
+        });
       });
     },
   };

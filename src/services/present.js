@@ -116,6 +116,15 @@ function applyDrop(index, stocks) {
   });
 }
 
+function riceCrowd(drop) {
+  const seats = 8;
+  const crowd = clamp(Math.round(4 + drop * 3.2), 4, seats + 10);
+  return {
+    seated: Math.min(seats, crowd),
+    queue: drop >= 1.5 ? Math.max(0, crowd - seats) : 0,
+  };
+}
+
 export function presentMarket(raw, { date, scrubbing = false, test = null } = {}) {
   const index = viewQuote(raw.index, date, scrubbing);
   const stocks = raw.stocks.map((stock) => viewQuote(stock, date, scrubbing));
@@ -137,7 +146,7 @@ export function presentMarket(raw, { date, scrubbing = false, test = null } = {}
     const high = Math.log10(Math.max(maxTurnover, 1));
     const span = high - low;
     const ratio = span <= 0.01 ? 0.5 : (Math.log10(Math.max(stock.turnover || 1, 1)) - low) / span;
-    const guests = clamp(Math.round(4 + ratio * 14), 4, 18);
+    const guests = clamp(Math.round(3 + ratio * 9), 3, 12);
     const upShare = stock.changePercent >= 0 ? 0.64 : 0.36;
     const guestsRight = clamp(Math.round(guests * upShare), 0, guests);
     let anomaly = anomalyFor(stock, date, scrubbing, scrubbing || raw.status?.state === 'open');
@@ -197,8 +206,6 @@ export function presentMarket(raw, { date, scrubbing = false, test = null } = {}
       people: clamp(Math.round(downCount * 0.7 + drop * 2.4), 0, 16),
       bowls: clamp(Math.round(downCount * 0.5 + drop * 2), 0, 12),
     },
-    rice: {
-      queue: clamp(Math.round(drop * 5), 0, 20),
-    },
+    rice: riceCrowd(drop),
   };
 }

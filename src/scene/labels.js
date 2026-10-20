@@ -140,7 +140,7 @@ export function drawSession(ctx, w, h, notice) {
   ctx.font = '700 56px "Microsoft JhengHei", sans-serif';
   ctx.fillText(notice.label || '', w / 2, 188);
   ctx.fillStyle = '#1a120e';
-  ctx.font = '700 68px "Segoe UI", "Microsoft JhengHei", sans-serif';
+  ctx.font = '700 56px "Segoe UI", "Microsoft JhengHei", sans-serif';
   ctx.fillText(notice.value || '', w / 2, 268);
 }
 

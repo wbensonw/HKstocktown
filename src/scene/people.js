@@ -110,6 +110,53 @@ export function idlePerson(person, time) {
   rig.rotation.z = Math.sin(time * 1.5) * 0.04;
 }
 
+export function dinePerson(person, time, seed = 0) {
+  const { rig, arms } = person.userData;
+  if (!rig || !arms) return;
+  const t = time + seed * 0.73;
+  rig.rotation.z = Math.sin(t * 1.6) * 0.05;
+  rig.position.y = Math.sin(t * 1.3) * 0.015;
+  const hand = seed % 2;
+  const bite = Math.max(0, Math.sin(t * 2.2));
+  arms[hand].rotation.x = 0.35 + bite * 1.05;
+  arms[hand].rotation.z = (hand ? -1 : 1) * 0.2;
+  arms[1 - hand].rotation.x = 0.15 + Math.sin(t * 1.4) * 0.12;
+  arms[1 - hand].rotation.z = (hand ? 1 : -1) * 0.08;
+}
+
+export function eatPerson(person, time, seed = 0) {
+  poseSit(person);
+  const { rig, arms } = person.userData;
+  if (!rig || !arms) return;
+  const t = time + seed * 1.7;
+  rig.rotation.x = Math.sin(t * 1.5) * 0.045;
+  const bite = Math.max(0, Math.sin(t * 2.4));
+  arms[0].rotation.x = 0.45 + bite * 0.95;
+  arms[1].rotation.x = 0.3 + Math.max(0, Math.sin(t * 2.4 + 1.2)) * 0.75;
+}
+
+export function washPerson(person, time, seed = 0) {
+  const { legs, rig, arms } = person.userData;
+  if (!legs || !rig || !arms) return;
+  const t = time * 1.15 + seed * 0.85;
+  legs[0].rotation.x = 0.72;
+  legs[1].rotation.x = 0.55;
+  rig.position.y = -0.16 + Math.sin(t * 4.2) * 0.02;
+  rig.rotation.x = 0.32 + Math.sin(t * 4.2) * 0.08;
+  const scrub = Math.sin(t * 6.5);
+  arms[0].rotation.x = 0.85 + scrub * 0.48;
+  arms[1].rotation.x = 0.7 - scrub * 0.48;
+  arms[0].rotation.z = 0.28;
+  arms[1].rotation.z = -0.28;
+}
+
+export function queueIdle(person, time, seed = 0) {
+  const { rig } = person.userData;
+  if (!rig) return;
+  rig.rotation.z = Math.sin(time * 1.4 + seed) * 0.045;
+  rig.position.y = Math.abs(Math.sin(time * 1.1 + seed)) * 0.012;
+}
+
 export function walkPerson(person, time, moving = true) {
   const swing = moving ? Math.sin(time * 7.5) * 0.55 : 0;
   const { legs, arms, rig } = person.userData;

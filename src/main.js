@@ -56,11 +56,11 @@ function scrubbing() {
 
 function aim() {
   if (zone === 'alley') {
-    aimPos.set(-18.2, 11.5, 1.2);
-    aimTarget.set(-14.0, 1.2, -3.4);
+    aimPos.set(-12.2, 6.2, 2.5);
+    aimTarget.set(-15, 1.6, -6.5);
   } else if (zone === 'rice') {
-    aimPos.set(-8.4, 8.6, 13.6);
-    aimTarget.set(-13.4, 1.6, 6.4);
+    aimPos.set(-14.6, 4.2, 12.4);
+    aimTarget.set(-14.6, 1.9, 5.4);
   } else if (zone === 'sign') {
     aimPos.set(1.6, 7.2, 3.4);
     aimTarget.set(0, 4.7, -1.6);

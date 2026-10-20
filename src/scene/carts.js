@@ -77,18 +77,47 @@ export function createCarts() {
   let anomalyPhase = 'hidden';
   let anomalyTimer = 0;
   let anomalyKey = '';
+  let anomalyT = 0;
   let bell = false;
-  const center = new THREE.Vector3(0.15, 0, 2.35);
-  const offstage = new THREE.Vector3(0, -12, 48);
+  const anomalyPath = [
+    new THREE.Vector3(-6.2, 0, -5.2),
+    new THREE.Vector3(-3.6, 0, -2.4),
+    new THREE.Vector3(-1.8, 0, 1.2),
+    new THREE.Vector3(0.15, 0, 2.35),
+  ];
+  const pathA = new THREE.Vector3();
+  const pathB = new THREE.Vector3();
 
-  anomaly.group.position.copy(offstage);
+  anomaly.group.position.copy(anomalyPath[0]);
   anomaly.group.visible = false;
 
   function moveAlong(cart, theta) {
-    const x = Math.cos(theta) * 7.05;
-    const z = Math.sin(theta) * 5.45;
+    const x = Math.cos(theta) * 7.4;
+    const z = Math.sin(theta) * 5.75;
     cart.group.position.set(x, 0, z);
-    cart.group.rotation.y = -theta + Math.PI / 2;
+    cart.group.rotation.y = -theta + Math.PI * 1.5;
+  }
+
+  function smoothstep(value) {
+    const t = Math.min(1, Math.max(0, value));
+    return t * t * (3 - 2 * t);
+  }
+
+  function samplePath(t, target) {
+    const scaled = t * (anomalyPath.length - 1);
+    const index = Math.min(anomalyPath.length - 2, Math.floor(scaled));
+    target.lerpVectors(anomalyPath[index], anomalyPath[index + 1], scaled - index);
+  }
+
+  function placeAnomaly(t) {
+    const eased = smoothstep(t);
+    samplePath(eased, anomaly.group.position);
+    anomaly.group.position.y = 0;
+    samplePath(smoothstep(Math.min(1, t + 0.04)), pathA);
+    samplePath(smoothstep(Math.max(0, t - 0.04)), pathB);
+    const dx = pathA.x - pathB.x;
+    const dz = pathA.z - pathB.z;
+    if (dx * dx + dz * dz > 1e-6) anomaly.group.rotation.y = Math.atan2(-dz, dx);
   }
 
   return {
@@ -106,7 +135,7 @@ export function createCarts() {
         { id: 'anomaly', object: anomaly.anchor, text: anomaly.caption, show: anomaly.group.visible && anomalyPhase !== 'hidden' },
       ];
     },
-    update(motion, view) {
+    update(motion, view, dt = motion) {
       const moving = view.session.carts !== 'park';
       if (moving) angle += motion * (view.session.carts === 'rush' ? 0.34 : 0.18);
       carts.forEach((cart) => {
@@ -140,32 +169,44 @@ export function createCarts() {
       const parked = view.session.carts === 'park';
       const active = (view.anomalies ?? []).find((item) => !parked || item.kind === 'test');
       const key = active?.text ?? '';
+      const step = Math.min(Math.max(dt, 0), 0.05);
       if (parked && active?.kind !== 'test') {
-        anomalyPhase = 'hidden';
-        anomaly.group.visible = false;
-        anomaly.group.position.copy(offstage);
-        anomalyKey = '';
-      } else if (key && key !== anomalyKey && anomalyPhase === 'hidden') {
-        anomalyKey = key;
-        anomalyPhase = 'in';
+        if (anomalyPhase === 'in' || anomalyPhase === 'hold') anomalyPhase = 'out';
+      } else if (key && key !== anomalyKey) {
         anomaly.caption = key;
         anomaly.group.visible = true;
-        bell = true;
+        if (anomalyPhase === 'hidden') {
+          anomalyKey = key;
+          anomalyPhase = 'in';
+          anomalyT = 0;
+          bell = true;
+          placeAnomaly(0);
+        } else if (anomalyPhase === 'out') {
+          anomalyKey = key;
+          anomalyPhase = 'in';
+        } else {
+          anomalyKey = key;
+        }
       }
       if (!key && (anomalyPhase === 'hold' || anomalyPhase === 'in')) anomalyPhase = 'out';
       if (anomalyPhase === 'in') {
-        anomaly.group.position.lerp(center, Math.min(1, motion * 2.2 + 0.02));
-        if (anomaly.group.position.distanceTo(center) < 0.25) {
+        anomalyT = Math.min(1, anomalyT + step / 2.5);
+        placeAnomaly(anomalyT);
+        anomaly.group.visible = true;
+        if (anomalyT >= 1) {
           anomalyPhase = 'hold';
           anomalyTimer = 8;
         }
       } else if (anomalyPhase === 'hold') {
-        anomalyTimer -= motion;
+        anomalyTimer -= step;
+        placeAnomaly(1);
         anomaly.lamp.scale.setScalar(1 + Math.sin(performance.now() / 80) * 0.15);
         if (anomalyTimer <= 0) anomalyPhase = 'out';
       } else if (anomalyPhase === 'out') {
-        anomaly.group.position.lerp(offstage, Math.min(1, motion * 1.6 + 0.02));
-        if (anomaly.group.position.distanceTo(offstage) < 0.4) {
+        anomalyT = Math.max(0, anomalyT - step / 2.5);
+        placeAnomaly(anomalyT);
+        anomaly.group.visible = true;
+        if (anomalyT <= 0) {
           anomalyPhase = 'hidden';
           anomaly.group.visible = false;
           anomalyKey = '';

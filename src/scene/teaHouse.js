@@ -9,7 +9,7 @@ import { createCarts } from './carts.js';
 import { createDimsum, createSteamer } from './dimsum.js';
 import { basic, box, cyl, lambert, plankTexture, put, sphere, torus, windowTexture } from './geom.js';
 import { createBoard, drawNeon, drawNote, drawPrice, drawSession, sharpCanvasTexture } from './labels.js';
-import { createPerson, createReader, givePaper, idlePerson, posePhone, poseSit, walkPerson } from './people.js';
+import { createPerson, createReader, dinePerson, givePaper, idlePerson, posePhone, poseSit, walkPerson } from './people.js';
 import { createAlley, createRiceStall } from './zones.js';
 import { createBlock } from './block.js';
 
@@ -32,7 +32,7 @@ const SKY = Object.fromEntries(Object.entries(LOOK).map(([key, value]) => [key, 
 
 export function tablePose(index, count = getUniverse().length) {
   const ang = (index / count) * Math.PI * 2 - Math.PI / 2;
-  return { x: Math.cos(ang) * 6.2, z: Math.sin(ang) * 4.5, ang };
+  return { x: Math.cos(ang) * 6.55, z: Math.sin(ang) * 4.85, ang };
 }
 
 function steamTexture() {
@@ -138,35 +138,58 @@ function buildBasin(scene) {
 }
 
 function buildGround(scene) {
-  put(scene, box(20, 0.12, 16), lambert('#a89074'), 0, -0.08, 0, null, true);
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(18.4, 0.16, 14), new THREE.MeshLambertMaterial({ map: plankTexture() }));
-  floor.position.y = -0.08;
+  put(scene, box(20.8, 0.12, 16.6), lambert('#a89074'), -0.25, -0.08, -0.4, null, true);
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(19, 0.16, 14.5), new THREE.MeshLambertMaterial({ map: plankTexture() }));
+  floor.position.set(-0.25, -0.08, -0.45);
   floor.receiveShadow = true;
   floor.castShadow = false;
   scene.add(floor);
   put(scene, torus(2.1, 0.03, 8, 40), lambert('#c6a15a'), 0, 0.17, 0, [Math.PI / 2, 0, 0]);
 }
 
+function coupletBoard(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 160;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#8d2e2e';
+  ctx.fillRect(0, 0, 160, 640);
+  ctx.strokeStyle = '#e6c56a';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(10, 10, 140, 620);
+  ctx.fillStyle = '#f3e2b0';
+  ctx.font = '700 72px "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  [...text].forEach((char, index) => {
+    ctx.fillText(char, 80, 110 + index * 108);
+  });
+  const texture = sharpCanvasTexture(canvas);
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 1.28),
+    new THREE.MeshBasicMaterial({ map: texture }),
+  );
+}
+
 function buildHall(scene) {
   const wood = lambert('#6b412c');
   const dark = lambert('#4e311f');
   const wall = (x, y, z, w, h, d) => put(scene, box(w, h, d), wood, x, y, z, null, true);
-  wall(-5.6, 0.78, -6.95, 6.8, 1.55, 0.16);
-  wall(5.6, 0.78, -6.95, 6.8, 1.55, 0.16);
-  wall(-5.4, 0.78, 6.95, 7.2, 1.55, 0.16);
-  wall(5.4, 0.78, 6.95, 7.2, 1.55, 0.16);
-  wall(-9.15, 0.78, 0, 0.16, 1.55, 13.7);
-  wall(9.15, 0.78, 0, 0.16, 1.55, 13.7);
-  [-2.8, 0.2, 3.1].forEach((z) => {
-    [-1, 1].forEach((side) => {
-      const x = side * 9.32;
+  wall(-5.95, 0.78, -7.85, 7.5, 1.55, 0.16);
+  wall(5.7, 0.78, -7.85, 7, 1.55, 0.16);
+  wall(-5.75, 0.78, 6.95, 7.9, 1.55, 0.16);
+  wall(5.5, 0.78, 6.95, 7.4, 1.55, 0.16);
+  wall(-9.8, 0.78, -0.45, 0.16, 1.55, 14.6);
+  wall(9.3, 0.78, -0.45, 0.16, 1.55, 14.6);
+  [-4.6, -1.2, 2.4].forEach((z) => {
+    [-9.97, 9.47].forEach((x) => {
       put(scene, box(0.05, 0.5, 0.62), lambert('#d5e4ea'), x, 0.95, z);
       put(scene, box(0.07, 0.5, 0.04), dark, x, 0.95, z);
       put(scene, box(0.07, 0.04, 0.62), dark, x, 0.95, z);
     });
   });
   for (let index = -3; index <= 3; index += 1) {
-    put(scene, box(0.06, 1.35, 0.06), dark, index * 0.42, 0.9, -6.95);
+    put(scene, box(0.06, 1.35, 0.06), dark, index * 0.42, 0.9, -7.85);
   }
   put(scene, box(2.6, 0.06, 0.06), dark, 0, 1.45, -6.95);
   put(scene, box(2.6, 0.06, 0.06), dark, 0, 0.7, -6.95);
@@ -186,18 +209,36 @@ function buildHall(scene) {
   const nameNeon = wallNeon('恆指大茶樓', '#ff5a6a', 2.7);
   nameNeon.position.set(0, 1.22, 7.18);
   scene.add(nameNeon);
-  [[-8.2, -5.5], [8.2, -5.5], [-8.2, 5.5], [8.2, 5.5]].forEach(([x, z]) => {
+  [[-8.85, -6.9], [8.35, -6.9], [-8.85, 5.5], [8.35, 5.5]].forEach(([x, z]) => {
     put(scene, box(0.28, 2.3, 0.28), dark, x, 1.15, z, null, true);
   });
   const eave = lambert('#4a2c1c');
-  put(scene, box(19.2, 0.1, 0.42), eave, 0, 1.62, 7.2, null, true);
-  put(scene, box(19.2, 0.1, 0.42), eave, 0, 1.62, -7.2, null, true);
-  put(scene, box(19.4, 0.045, 0.12), lambert('#e6d2a8'), 0, 1.7, 7.38);
-  put(scene, box(19.4, 0.045, 0.12), lambert('#e6d2a8'), 0, 1.7, -7.38);
-  put(scene, box(0.42, 0.1, 14.6), eave, -9.45, 1.62, 0, null, true);
-  put(scene, box(0.42, 0.1, 14.6), eave, 9.45, 1.62, 0, null, true);
-  put(scene, box(18, 0.1, 0.1), lambert('#3a2418'), 0, 0.12, 6.88);
-  put(scene, box(18, 0.1, 0.1), lambert('#3a2418'), 0, 0.12, -6.88);
+  put(scene, box(20.2, 0.1, 0.42), eave, -0.25, 1.62, 7.2, null, true);
+  put(scene, box(20.2, 0.1, 0.42), eave, -0.25, 1.62, -8.1, null, true);
+  put(scene, box(20.4, 0.045, 0.12), lambert('#e6d2a8'), -0.25, 1.7, 7.38);
+  put(scene, box(20.4, 0.045, 0.12), lambert('#e6d2a8'), -0.25, 1.7, -8.28);
+  put(scene, box(0.42, 0.1, 15.4), eave, -10.1, 1.62, -0.45, null, true);
+  put(scene, box(0.42, 0.1, 15.4), eave, 9.6, 1.62, -0.45, null, true);
+  put(scene, box(19.2, 0.1, 0.1), lambert('#3a2418'), -0.25, 0.12, 6.88);
+  put(scene, box(19.2, 0.1, 0.1), lambert('#3a2418'), -0.25, 0.12, -7.78);
+  const tile = lambert('#2f6b4a');
+  const grout = lambert('#d7e4d4');
+  [[-4.7, 5.6], [4.8, 5.6]].forEach(([x, width]) => {
+    put(scene, box(width, 0.22, 0.05), tile, x, 0.2, 7.06);
+    put(scene, box(width, 0.03, 0.02), grout, x, 0.32, 7.09);
+  });
+  [
+    { text: '茶香滿座', x: -2.35 },
+    { text: '點心宜人', x: 2.35 },
+  ].forEach(({ text, x }) => {
+    const board = coupletBoard(text);
+    board.position.set(x, 0.85, 7.08);
+    scene.add(board);
+  });
+  [-4.2, 4.2].forEach((x) => {
+    put(scene, cyl(0.02, 0.02, 0.22, 6), dark, x, 1.55, 7.12);
+    put(scene, sphere(0.11, 10, 8), basic('#d4543c'), x, 1.38, 7.12);
+  });
 }
 
 function buildHarbour(scene) {
@@ -280,16 +321,12 @@ function buildCashier(scene) {
   const keeper = createPerson(2, '#f4e1c4', { apron: true });
   keeper.position.set(0, 0, -0.45);
   group.add(keeper);
-  const board = createBoard(512, 320, 1.45, 0.9);
-  board.mesh.position.set(0, 1.55, 0.2);
-  group.add(board.mesh);
   scene.add(group);
-  return { board };
 }
 
 function buildKitchen(scene) {
   const group = new THREE.Group();
-  group.position.set(-5.6, 0, -4.15);
+  group.position.set(-6.3, 0, -5.4);
   put(group, box(1.8, 0.7, 0.7), lambert('#d9d3c8'), 0, 0.5, 0, null, true);
   put(group, cyl(0.22, 0.18, 0.16, 14), lambert('#c0c6cc'), -0.35, 0.92, 0);
   put(group, cyl(0.16, 0.14, 0.2, 12), lambert('#b7bdc2'), 0.4, 0.95, 0);
@@ -330,7 +367,7 @@ function buildTables(scene) {
     [[-0.46, -0.46], [0.46, -0.46], [-0.46, 0.46], [0.46, 0.46]].forEach(([x, z]) => {
       put(group, box(0.08, 0.7, 0.08), lambert('#5c3b28'), x, 0.35, z, null, true);
     });
-    const people = Array.from({ length: 18 }, (_, n) => {
+    const people = Array.from({ length: 12 }, (_, n) => {
       const person = createPerson(index + n);
       person.visible = false;
       group.add(person);
@@ -371,8 +408,9 @@ function buildTables(scene) {
   });
 }
 
-function placePeople(table, count, rightCount, closed) {
+function placePeople(table, count, rightCount, closed, time) {
   table.reader.visible = !closed;
+  if (table.reader.visible) idlePerson(table.reader, time + table.index);
   const { dir, tangent } = table;
   table.people.forEach((person, index) => {
     person.visible = !closed && index < count;
@@ -380,10 +418,11 @@ function placePeople(table, count, rightCount, closed) {
     const onRight = index < rightCount;
     const slot = onRight ? index : index - rightCount;
     const sideCount = Math.max(1, onRight ? rightCount : count - rightCount);
-    const along = (slot - (sideCount - 1) / 2) * 0.34;
+    const along = (slot - (sideCount - 1) / 2) * 0.38;
     const side = onRight ? 0.2 : -0.2;
     person.position.set(dir.x * 1.16 + tangent.x * (along + side), 0, dir.y * 1.16 + tangent.y * (along + side));
     person.lookAt(table.group.position.x, 0.5, table.group.position.z);
+    dinePerson(person, time, index + table.index * 5);
   });
 }
 
@@ -464,9 +503,9 @@ function birdCage() {
 
 function buildLife(scene) {
   [
-    { text: '財源廣進', color: '#ff5b68', x: -8.95, y: 1.15, z: -1.1, ry: Math.PI / 2 },
-    { text: '飲啖茶食個包', color: '#ffd15c', x: 8.95, y: 1.15, z: 1.5, ry: -Math.PI / 2, width: 3.15 },
-    { text: '賭性堅強', color: '#7dfff0', x: 0.1, y: 1.22, z: -6.78, ry: 0 },
+    { text: '財源廣進', color: '#ff5b68', x: -9.6, y: 1.15, z: -1.4, ry: Math.PI / 2 },
+    { text: '飲啖茶食個包', color: '#ffd15c', x: 9.1, y: 1.15, z: 1.5, ry: -Math.PI / 2, width: 3.15 },
+    { text: '賭性堅強', color: '#7dfff0', x: 0.1, y: 1.22, z: -7.68, ry: 0 },
   ].forEach((sign) => {
     const mesh = wallNeon(sign.text, sign.color, sign.width || 2.25);
     mesh.position.set(sign.x, sign.y, sign.z);
@@ -474,7 +513,7 @@ function buildLife(scene) {
     scene.add(mesh);
   });
   const cageA = birdCage();
-  cageA.position.set(-3.5, 2.05, -4.35);
+  cageA.position.set(-3.5, 2.05, -5.15);
   const cageB = birdCage();
   cageB.position.set(3.7, 2.05, 1.5);
   scene.add(cageA, cageB);
@@ -489,7 +528,6 @@ function buildLife(scene) {
   });
   put(wood, box(1.85, 0.06, 0.28), lambert('#4a2c1c'), 0, 1.55, 0.04);
   put(wood, box(1.7, 0.045, 0.18), lambert('#8d2e2e'), 0, 1.48, 0.08);
-  put(wood, sphere(0.055, 8, 6), basic('#ffc56a'), 0, 1.38, 0.16);
   const board = createBoard(640, 360, 1.7, 0.96);
   board.mesh.position.set(0, 0.92, 0.04);
   wood.add(board.mesh);
@@ -532,7 +570,7 @@ function buildLife(scene) {
   const farWalkers = Array.from({ length: 8 }, (_, index) => createPerson(30 + index));
   farWalkers.forEach((person) => scene.add(person));
   const parkLoop = [
-    [13.8, -4.2], [17.4, -4.8], [21.4, -3.6], [21.8, 2.2], [17.6, 4.8], [14.4, 4.2],
+    [13.8, -5.8], [17.4, -6.4], [21.4, -5.2], [21.8, 3.6], [17.6, 6.2], [14.4, 5.6],
   ];
   let clock = 0;
   return {
@@ -649,7 +687,7 @@ export function createWorld(parent) {
   const harbourMats = buildHarbour(scene);
   const teapot = buildTeapot(scene);
   const neon = buildNeon(scene);
-  const cashier = buildCashier(scene);
+  buildCashier(scene);
   const tables = buildTables(scene);
   const kitchen = buildKitchen(scene);
   const alley = createAlley();
@@ -772,13 +810,6 @@ export function createWorld(parent) {
       drawNote(ctx, w, h, ['大市成交', formatTurnover(view.index.turnover)]);
     });
 
-    cashier.board.mesh.visible = !closed;
-    if (!closed) {
-      const cashierLines = session.countdown
-        ? [session.title, session.countdown.label, session.countdown.text]
-        : [session.title, session.clock];
-      cashier.board.redraw(cashierLines.join('|'), (ctx, w, h) => drawNote(ctx, w, h, cashierLines));
-    }
     const notice = session.countdown
       ? { title: session.title, label: session.countdown.label, value: session.countdown.text }
       : { title: session.title, label: '香港時間', value: session.clock };
@@ -793,7 +824,7 @@ export function createWorld(parent) {
         (ctx, w, h) => drawPrice(ctx, w, h, stock, palette),
       );
       table.plate.lookAt(camera.position);
-      placePeople(table, stock.guests, stock.guestsRight, closed);
+      placePeople(table, stock.guests, stock.guestsRight, closed, performance.now() / 1000);
       updateSteam(table, stock.steam, motion, session.id);
     });
 
@@ -806,7 +837,7 @@ export function createWorld(parent) {
     kitchen.geometry.attributes.position.needsUpdate = true;
 
     alley.setCounts(view.alley.people, view.alley.bowls);
-    rice.setQueue(view.rice.queue);
+    rice.setCrowd(view.rice.seated, view.rice.queue);
     const turnover = view.index.turnover || 0;
     const low = Math.log10(5e10);
     const high = Math.log10(4e11);
@@ -816,7 +847,7 @@ export function createWorld(parent) {
     const walkerCount = 3 + Math.round(ratio * 5);
     life.update(motion, closed, walkerCount);
     traffic.update(motion || dt * 0.35, carCount);
-    carts.update(motion, { ...view, session });
+    carts.update(motion, { ...view, session }, dt);
     lastSession = session;
   }
 

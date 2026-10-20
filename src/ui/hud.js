@@ -222,7 +222,7 @@ function detailHtml(state) {
     return `<h2>後巷洗大餅</h2><p>下跌的精選股愈多、恆指跌得愈深，洗碗抵茶錢的人和碗疊就愈多。而家 ${view.alley.people} 人、${view.alley.bowls} 疊碗。</p><p class="meta">虛構幽默，不構成投資建議。</p>`;
   }
   if (panel.type === 'rice') {
-    return `<h2>大家樂</h2><p>恆指下跌時，店裡先坐滿，門口再排隊。而家 ${view.rice.queue} 人。</p><p class="meta">虛構幽默，不構成投資建議。</p>`;
+    return `<h2>大家樂</h2><p>平時店裡有人食飯。大市跌得多、坐滿之後，先在門口排隊。而家 ${view.rice.seated} 人食緊，${view.rice.queue} 人排隊。</p><p class="meta">虛構幽默，不構成投資建議。</p>`;
   }
   if (panel.type === 'cart') {
     const rankKey = { gain: 'gainers', loss: 'losers', turnover: 'turnover' }[panel.id];

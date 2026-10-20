@@ -74,10 +74,10 @@ function duration(totalSeconds) {
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
   const seconds = safe % 60;
+  const hh = String(hours).padStart(2, '0');
   const mm = String(minutes).padStart(2, '0');
   const ss = String(seconds).padStart(2, '0');
-  if (hours > 0) return `${String(hours).padStart(2, '0')}:${mm}:${ss}`;
-  return `${mm}:${ss}`;
+  return `${hh}:${mm}:${ss}`;
 }
 
 function countdownUntil(date, target) {
